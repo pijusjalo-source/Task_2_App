@@ -1,9 +1,8 @@
-"""Input validation.
+"""Input validation (requirement: create and update check at least 4 data types).
 
-One Pydantic model describes what a valid holding looks like. Both the web
-forms and the public API use it, so the rules are written once.
+One Pydantic model describes a valid holding. The web forms AND the public API
+both use it, so the rules are written once.
 
-Data types checked (the task asks for at least 4):
   text     -> ticker (must be one of the Magnificent 7), notes
   integer  -> shares
   decimal  -> buy_price
@@ -11,13 +10,13 @@ Data types checked (the task asks for at least 4):
   boolean  -> is_active
 """
 
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 
-from market import MAG7
+from services import MAG7
 
 
 class HoldingIn(BaseModel):
@@ -25,11 +24,9 @@ class HoldingIn(BaseModel):
 
     ticker: str = Field(description="One of: " + ", ".join(MAG7), examples=["AAPL"])
     shares: int = Field(gt=0, le=10_000_000, description="Whole number of shares", examples=[10])
-    buy_price: Decimal = Field(
-        gt=0, le=1_000_000, max_digits=12, decimal_places=2,
-        description="Price paid per share in USD, max 2 decimal places", examples=["189.50"],
-    )
-    buy_date: date = Field(description="Date bought, YYYY-MM-DD, not in the future", examples=["2026-03-15"])
+    buy_price: Decimal = Field(gt=0, max_digits=12, decimal_places=2,
+                               description="Price paid per share in USD", examples=["189.50"])
+    buy_date: date = Field(description="YYYY-MM-DD, not in the future", examples=["2026-03-15"])
     is_active: bool = Field(default=True, description="Still holding this position?")
     notes: Optional[str] = Field(default=None, max_length=500)
 
@@ -43,59 +40,33 @@ class HoldingIn(BaseModel):
 
     @field_validator("buy_date")
     @classmethod
-    def date_not_in_future(cls, v: date) -> date:
+    def not_in_future(cls, v: date) -> date:
         if v > date.today():
             raise ValueError("Buy date cannot be in the future")
-        if v.year < 1980:
-            raise ValueError("Buy date must be after 1980")
         return v
 
-    @field_validator("notes", mode="before")
+    @field_validator("notes")
     @classmethod
-    def empty_notes_to_none(cls, v):
-        if isinstance(v, str) and not v.strip():
-            return None
-        return v
+    def empty_to_none(cls, v):
+        return v or None  # an empty form field is saved as "no notes"
 
 
-class HoldingOut(BaseModel):
-    id: int
-    ticker: str
-    company_name: str
-    shares: int
-    buy_price: Decimal
-    buy_date: date
-    is_active: bool
-    notes: Optional[str] = None
-    attachment_url: Optional[str] = None
-    attachment_name: Optional[str] = None
-    cost: Decimal = Field(description="shares × buy_price")
-    current_price: Optional[Decimal] = Field(None, description="Latest saved market price")
-    price_updated_at: Optional[datetime] = None
-    market_value: Optional[Decimal] = Field(None, description="shares × current_price")
-    pnl: Optional[Decimal] = Field(None, description="market_value − cost")
-    pnl_pct: Optional[Decimal] = Field(None, description="pnl ÷ cost × 100")
-
-
-_FRIENDLY = {
+# Short messages for the web form, by Pydantic error type.
+FRIENDLY = {
     "int_parsing": "Must be a whole number",
-    "int_from_float": "Must be a whole number (no decimals)",
+    "int_from_float": "Must be a whole number",
     "decimal_parsing": "Must be a number, e.g. 189.50",
     "decimal_max_places": "Use at most 2 decimal places",
-    "date_from_datetime_parsing": "Must be a date in the format YYYY-MM-DD",
-    "date_parsing": "Must be a date in the format YYYY-MM-DD",
-    "bool_parsing": "Must be true or false",
-    "missing": "This field is required",
+    "greater_than": "Must be greater than 0",
+    "date_from_datetime_parsing": "Must be a date (YYYY-MM-DD)",
+    "string_too_long": "Use at most 500 characters",
 }
 
 
 def friendly_errors(exc: ValidationError) -> dict:
-    """Turn Pydantic's error list into {field: message} for the HTML form."""
-    out = {}
+    """Turn Pydantic's error list into {field name: message} for the HTML form."""
+    errors = {}
     for err in exc.errors():
-        field = str(err["loc"][-1]) if err["loc"] else "form"
-        msg = _FRIENDLY.get(err["type"])
-        if msg is None:
-            msg = err["msg"].removeprefix("Value error, ")
-        out.setdefault(field, msg)
-    return out
+        message = FRIENDLY.get(err["type"]) or err["msg"].removeprefix("Value error, ")
+        errors[str(err["loc"][0])] = message
+    return errors

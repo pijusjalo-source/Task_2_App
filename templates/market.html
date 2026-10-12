@@ -1,9 +1,8 @@
 {% extends "base.html" %}
-{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
 {% block content %}
-{% if msg == "ok" %}<div class="flash">Prices updated from Finnhub.</div>{% endif %}
-{% if msg == "partial" %}<div class="flash err">Some prices could not be fetched. The last saved prices are shown.</div>{% endif %}
-{% if msg == "nokey" or not has_key %}<div class="flash err">FINNHUB_API_KEY is not set, so prices can’t be fetched. Add it in Vercel → Settings → Environment Variables.</div>{% endif %}
+{% if not has_key %}<div class="flash err">API key not set: add FINNHUB_API_KEY in Vercel → Settings → Environment Variables to fetch prices.</div>
+{% elif msg == "failed" %}<div class="flash err">Some prices could not be fetched. The last saved prices are shown.</div>
+{% elif msg == "ok" %}<div class="flash">Prices updated from Finnhub.</div>{% endif %}
 
 <div class="row spread" style="margin-bottom:16px">
   <h1 style="margin:0">Market: Magnificent 7 + S&amp;P 500</h1>
@@ -13,23 +12,27 @@
 </div>
 
 <p class="muted">Prices come from the Finnhub API. A background job saves them every weekday after the US market
-closes (Vercel Cron, 21:00 UTC). This button fetches them on demand; during US trading hours (16:30–23:00 Vilnius time) they are live.</p>
+closes (Vercel Cron, 21:00 UTC). This button fetches them on demand.</p>
 
 <div class="card" style="padding:4px 12px; overflow-x:auto">
   <table>
     <thead><tr><th>Symbol</th><th class="hide-sm">Name</th><th class="num">Price</th><th class="num">Change</th>
-      <th class="num">Change %</th><th class="num hide-sm">Prev. close</th><th class="hide-sm">Updated (Vilnius)</th><th></th></tr></thead>
+      <th class="num">Change %</th><th class="num hide-sm">Prev. close</th><th class="hide-sm">Updated (Vilnius)</th></tr></thead>
     <tbody>
-    {% for r in rows %}
-      <tr {% if r.symbol == benchmark %}style="background:#f3f2ed"{% endif %}>
-        <td class="ticker">{{ r.symbol }}</td>
-        <td class="hide-sm">{{ r.name }}{% if r.symbol == benchmark %} <span class="badge closed">benchmark</span>{% endif %}</td>
-        <td class="num">{{ r.p.price|money if r.p else '—' }}</td>
-        <td class="num">{{ pl(r.p.change) if r.p else '—' }}</td>
-        <td class="num">{{ pl(r.p.change_pct, '%') if r.p else '—' }}</td>
-        <td class="num hide-sm">{{ r.p.prev_close|money if r.p else '—' }}</td>
-        <td class="hide-sm muted">{{ r.p.fetched_at|local if r.p else '—' }}</td>
-        <td>{% if r.symbol != benchmark %}{% if r.owned %}<span class="badge">owned</span>{% else %}<a href="/holdings/new?ticker={{ r.symbol }}">Add</a>{% endif %}{% endif %}</td>
+    {% for symbol, name in symbols.items() %}
+      {% set p = prices.get(symbol) %}
+      <tr>
+        <td class="ticker">{{ symbol }}</td>
+        <td class="hide-sm">{{ name }}{% if symbol == benchmark %} <span class="badge closed">benchmark</span>{% endif %}</td>
+        {% if p %}
+        <td class="num">{{ p.price|money }}</td>
+        <td class="num">{{ pl(p.change) }}</td>
+        <td class="num">{{ pl(p.change_pct, '%') }}</td>
+        <td class="num hide-sm">{{ p.prev_close|money }}</td>
+        <td class="hide-sm muted">{{ p.fetched_at|local }}</td>
+        {% else %}
+        <td class="muted" colspan="5">No price saved yet</td>
+        {% endif %}
       </tr>
     {% endfor %}
     </tbody>

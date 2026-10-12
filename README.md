@@ -8,22 +8,19 @@ Deployed on **Vercel** (PaaS). VU course "Programavimas debesų kompiuterijoje",
 | Requirement | How it is met |
 |---|---|
 | CRUD + list | Pages `/` (portfolio), `/holdings/new`, `/holdings/{id}`, `/holdings/{id}/edit`, delete button |
-| Validation of ≥4 data types | `schemas.py`: text (ticker must be one of the Mag 7), integer (shares), decimal (buy price), date (buy date), boolean (still holding) |
+| Validation of ≥4 data types | `schemas.py`, on create and update: text (ticker must be one of the Mag 7), integer (shares), decimal (buy price), date (buy date), boolean (still holding) |
 | Web application | FastAPI + Jinja2 HTML templates |
-| Public API | JSON under `/api/...` (holdings, portfolio, prices, reports); interactive docs at `/docs` |
+| Public API | JSON under `/api/...` (holdings, portfolio, prices); interactive docs at `/docs` |
 | Database | Neon Postgres via Vercel Marketplace (`DATABASE_URL`) |
 | File storage | Vercel Blob (`BLOB_READ_WRITE_TOKEN`): attachments per holding and the daily CSV reports |
 | Background operation | Vercel Cron, weekdays 21:00 UTC (after US close) → `/api/cron/daily`: fetch prices, calculate P&L, save CSV to Blob, save summary |
 
 ## Files
 
-- `app.py` – web pages and public API
-- `schemas.py` – validation rules
-- `db.py` – tables (`holdings` = your portfolio, `prices` = market data, `portfolio_reports`) and connection
-- `market.py` – Finnhub price fetching
-- `portfolio.py` – cost, market value, P&L calculations
-- `storage.py` – file uploads (Vercel Blob, local folder in development)
-- `jobs.py` – the daily background job
+- `app.py` – web pages, public API and the cron endpoint
+- `schemas.py` – validation rules (one model for the forms and the API)
+- `db.py` – database connection and the 3 tables (`holdings`, `prices`, `portfolio_reports`)
+- `services.py` – Finnhub prices, P&L calculations, Vercel Blob files, the daily job
 - `vercel.json` – cron schedule
 - `templates/` – HTML pages
 
@@ -43,4 +40,5 @@ pip install -r requirements.txt uvicorn
 uvicorn app:app --reload
 ```
 
-Without `DATABASE_URL` it uses a local SQLite file; without `BLOB_READ_WRITE_TOKEN` files go to `local_uploads/`.
+Without `DATABASE_URL` it uses a local SQLite file (`local.db`). File uploads need Vercel Blob,
+so locally they show "File storage is not connected" unless `BLOB_READ_WRITE_TOKEN` is set.

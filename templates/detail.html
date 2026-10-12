@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
 {% block content %}
 {% if msg == "created" %}<div class="flash">Holding added to your portfolio.</div>{% endif %}
 {% if msg == "updated" %}<div class="flash">Changes saved.</div>{% endif %}
@@ -33,9 +32,6 @@
     <dd>
       {% if h.attachment_url %}
         <a href="{{ h.attachment_url }}" target="_blank">{{ h.attachment_name }}</a>
-        {% if h.attachment_name and h.attachment_name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
-          <div style="margin-top:10px"><img src="{{ h.attachment_url }}" alt="" style="max-width:240px; max-height:160px; border-radius:6px; border:1px solid var(--line)"></div>
-        {% endif %}
       {% else %}—{% endif %}
     </dd>
     <dt>Created / updated</dt><dd class="muted">{{ h.created_at|local }} / {{ h.updated_at|local }}</dd>

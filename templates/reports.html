@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
 {% block content %}
 {% if msg == "ran" %}<div class="flash">Daily job finished.</div>{% endif %}
 

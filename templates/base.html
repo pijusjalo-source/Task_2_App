@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <title>Mag7 Portfolio</title>
   <style>
     :root {
       --bg: #f6f5f1; --card: #ffffff; --ink: #1c1f24; --muted: #6b6f76; --line: #e3e1da;
@@ -62,18 +62,17 @@
 <body>
   <header>
     <div class="wrap">
-      <a class="brand" href="/">{{ app_name.split(' ')[0] }} <span>{{ app_name.split(' ')[1] }}</span></a>
+      <a class="brand" href="/">Mag7 <span>Portfolio</span></a>
       <a href="/">Portfolio</a>
       <a href="/holdings/new">+ Add</a>
       <a href="/market">Market</a>
       <a href="/reports">Reports</a>
       <a href="/docs">API docs</a>
-      <a href="/about">About</a>
     </div>
   </header>
   <main class="wrap">
     {% block content %}{% endblock %}
   </main>
-  <footer class="wrap">{{ app_name }} · FastAPI on Vercel · Neon Postgres · Vercel Blob · Vercel Cron · prices by Finnhub</footer>
+  <footer class="wrap">Mag7 Portfolio · FastAPI on Vercel · Neon Postgres · Vercel Blob · Vercel Cron · prices by Finnhub · public API: <a href="/docs">/docs</a></footer>
 </body>
 </html>

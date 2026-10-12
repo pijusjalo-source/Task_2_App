@@ -1,4 +1,4 @@
-"""Database layer.
+"""Database layer (requirement: database for persistence).
 
 The connection string comes from an environment variable (12-Factor rule III:
 config lives in the environment, not in the code). On Vercel, the Neon Postgres
@@ -56,7 +56,6 @@ prices = Table(
     Column("change", Numeric(12, 4), nullable=True),        # vs previous close
     Column("change_pct", Numeric(8, 4), nullable=True),
     Column("prev_close", Numeric(12, 4), nullable=True),
-    Column("quote_time", DateTime(timezone=True), nullable=True),   # time of the quote at Finnhub
     Column("fetched_at", DateTime(timezone=True), nullable=False),  # when our job fetched it
 )
 
@@ -109,6 +108,3 @@ def get_engine():
         metadata.create_all(_engine)
     return _engine
 
-
-def database_kind() -> str:
-    return "Postgres (Neon)" if _database_url().startswith("postgresql") else "SQLite (local)"

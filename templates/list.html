@@ -1,5 +1,4 @@
 {% extends "base.html" %}
-{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
 {% block content %}
 {% if msg == "deleted" %}<div class="flash">Holding deleted.</div>{% endif %}
 
@@ -15,23 +14,6 @@
   <div class="stat"><span class="muted">S&amp;P 500 (SPY) today</span><b>{{ pl(s.spy_change_pct, "%") }}</b></div>
 </div>
 <p class="muted" style="margin-top:-6px">Prices in USD, last updated {{ s.prices_at|local }} (Vilnius time). <a href="/market">Market prices →</a></p>
-
-<form class="row" method="get" action="/" style="margin-bottom:16px">
-  <input name="q" value="{{ q }}" placeholder="Search ticker or company" style="max-width:240px">
-  <select name="status" style="max-width:150px">
-    <option value="all" {% if status=='all' %}selected{% endif %}>All</option>
-    <option value="active" {% if status=='active' %}selected{% endif %}>Active only</option>
-    <option value="closed" {% if status=='closed' %}selected{% endif %}>Closed only</option>
-  </select>
-  <select name="sort" style="max-width:190px">
-    <option value="newest" {% if sort=='newest' %}selected{% endif %}>Newest first</option>
-    <option value="pnl" {% if sort=='pnl' %}selected{% endif %}>Best P&amp;L %</option>
-    <option value="value" {% if sort=='value' %}selected{% endif %}>Largest position</option>
-    <option value="ticker" {% if sort=='ticker' %}selected{% endif %}>Ticker A–Z</option>
-    <option value="buy_date" {% if sort=='buy_date' %}selected{% endif %}>Latest buy date</option>
-  </select>
-  <button class="btn secondary" type="submit">Apply</button>
-</form>
 
 <div class="card" style="padding:4px 12px; overflow-x:auto">
   {% if items %}
