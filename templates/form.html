@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{% if mode == "new" %}Add holding{% else %}Edit {{ holding.ticker }}{% endif %}</h1>
+
+{% if errors %}<div class="flash err">Please fix the highlighted fields.</div>{% endif %}
+
+{% macro err(name) %}{% if errors.get(name) %}<div class="error">{{ errors[name] }}</div>{% endif %}{% endmacro %}
+
+<form class="card" method="post" enctype="multipart/form-data" novalidate
+      action="{% if mode == 'new' %}/holdings/new{% else %}/holdings/{{ holding.id }}/edit{% endif %}">
+  <div class="grid2">
+    <div class="field {% if errors.get('ticker') %}has-error{% endif %}">
+      <label for="ticker">Stock <span class="hint">text · one of the Magnificent 7</span></label>
+      <select id="ticker" name="ticker">
+        <option value="">Choose a stock…</option>
+        {% for t, name in mag7.items() %}
+          {% set p = prices.get(t) %}
+          <option value="{{ t }}" data-price="{{ '%.2f'|format(p.price) if p else '' }}"
+                  {% if values.get('ticker') == t %}selected{% endif %}>{{ t }} · {{ name }}{% if p %} · last {{ p.price|money }}{% endif %}</option>
+        {% endfor %}
+      </select>
+      {{ err('ticker') }}
+    </div>
+    <div class="field {% if errors.get('shares') %}has-error{% endif %}">
+      <label for="shares">Shares <span class="hint">integer · whole number &gt; 0</span></label>
+      <input id="shares" name="shares" value="{{ values.get('shares', '') }}" inputmode="numeric">
+      {{ err('shares') }}
+    </div>
+    <div class="field {% if errors.get('buy_price') %}has-error{% endif %}">
+      <label for="buy_price">Buy price, USD <span class="hint">decimal · max 2 decimals</span></label>
+      <div class="row" style="flex-wrap:nowrap">
+        <input id="buy_price" name="buy_price" value="{{ values.get('buy_price', '') }}" inputmode="decimal">
+        <button class="btn secondary" type="button" id="use-price" style="white-space:nowrap">Use last price</button>
+      </div>
+      <div class="hint" id="price-hint"></div>
+      {{ err('buy_price') }}
+    </div>
+    <div class="field {% if errors.get('buy_date') %}has-error{% endif %}">
+      <label for="buy_date">Buy date <span class="hint">date · not in the future</span></label>
+      <input id="buy_date" name="buy_date" type="date" value="{{ values.get('buy_date', '') }}">
+      {{ err('buy_date') }}
+    </div>
+  </div>
+
+  <div class="field">
+    <label class="check"><input type="checkbox" name="is_active" {% if values.get('is_active') %}checked{% endif %}>
+      Still holding <span class="hint">boolean · untick when you sold it</span></label>
+  </div>
+
+  <div class="field {% if errors.get('notes') %}has-error{% endif %}">
+    <label for="notes">Notes <span class="hint">optional · max 500 characters</span></label>
+    <textarea id="notes" name="notes" rows="3">{{ values.get('notes') or '' }}</textarea>
+    {{ err('notes') }}
+  </div>
+
+  <div class="field {% if errors.get('attachment') %}has-error{% endif %}">
+    <label for="attachment">Attachment <span class="hint">optional · e.g. trade confirmation · PNG, JPG, WEBP, PDF or CSV, max 4 MB · stored in cloud file storage</span></label>
+    {% if holding and holding.attachment_url %}
+      <p class="muted" style="margin:4px 0 8px">Current: <a href="{{ holding.attachment_url }}" target="_blank">{{ holding.attachment_name }}</a>
+        &nbsp;<label class="check" style="display:inline-flex; font-weight:400"><input type="checkbox" name="remove_attachment"> remove</label></p>
+    {% endif %}
+    <input id="attachment" name="attachment" type="file" accept=".png,.jpg,.jpeg,.webp,.pdf,.csv">
+    {{ err('attachment') }}
+  </div>
+
+  <div class="row">
+    <button class="btn" type="submit">{% if mode == "new" %}Add to portfolio{% else %}Save changes{% endif %}</button>
+    <a class="btn secondary" href="{% if holding %}/holdings/{{ holding.id }}{% else %}/{% endif %}">Cancel</a>
+  </div>
+</form>
+
+<script>
+  const sel = document.getElementById('ticker');
+  const hint = document.getElementById('price-hint');
+  function showHint() {
+    const p = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.price;
+    hint.textContent = p ? 'Last saved market price: ' + p + ' USD' : (sel.value ? 'No price saved yet – refresh prices on the Market page.' : '');
+  }
+  sel.addEventListener('change', showHint);
+  document.getElementById('use-price').addEventListener('click', () => {
+    const p = sel.selectedOptions[0] && sel.selectedOptions[0].dataset.price;
+    if (p) document.getElementById('buy_price').value = p;
+  });
+  showHint();
+</script>
+{% endblock %}

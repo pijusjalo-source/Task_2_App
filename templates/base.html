@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <style>
+    :root {
+      --bg: #f6f5f1; --card: #ffffff; --ink: #1c1f24; --muted: #6b6f76; --line: #e3e1da;
+      --accent: #0f5c4d; --accent-ink: #ffffff; --danger: #b3261e; --ok-bg: #e6f2ee; --err-bg: #fbeaea;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+           font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    header { background: var(--ink); color: #fff; }
+    header .wrap { display: flex; align-items: center; gap: 24px; padding-top: 14px; padding-bottom: 14px; flex-wrap: wrap; }
+    header a { color: #d8dad6; text-decoration: none; }
+    header a:hover { color: #fff; }
+    .brand { font-weight: 700; color: #fff; letter-spacing: .02em; margin-right: auto; }
+    .brand span { color: #6fc2a8; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 0 16px; }
+    main { padding: 28px 0 60px; }
+    h1 { font-size: 24px; margin: 0 0 18px; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    th { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    .ticker { font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    a { color: var(--accent); }
+    .btn { display: inline-block; border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink);
+           padding: 8px 14px; border-radius: 7px; text-decoration: none; font: inherit; cursor: pointer; }
+    .btn.secondary { background: transparent; color: var(--accent); }
+    .btn.danger { background: var(--danger); border-color: var(--danger); }
+    .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+    .spread { justify-content: space-between; }
+    input, select, textarea { font: inherit; padding: 8px 10px; border: 1px solid #cfccc3; border-radius: 7px; background: #fff; width: 100%; }
+    label { display: block; font-weight: 600; margin-bottom: 4px; font-size: 14px; }
+    .field { margin-bottom: 16px; }
+    .hint { color: var(--muted); font-size: 13px; font-weight: 400; }
+    .error { color: var(--danger); font-size: 13px; margin-top: 4px; }
+    .has-error input, .has-error textarea { border-color: var(--danger); }
+    .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; }
+    @media (max-width: 640px) { .grid2 { grid-template-columns: 1fr; } table { font-size: 14px; } .hide-sm { display: none; } }
+    .flash { padding: 10px 14px; border-radius: 8px; margin-bottom: 18px; background: var(--ok-bg); }
+    .flash.err { background: var(--err-bg); }
+    .badge { font-size: 12px; padding: 2px 8px; border-radius: 99px; background: var(--ok-bg); color: var(--accent); }
+    .badge.closed { background: #eceae4; color: var(--muted); }
+    .muted { color: var(--muted); }
+    dl { display: grid; grid-template-columns: 180px 1fr; gap: 8px 16px; margin: 0; }
+    dt { color: var(--muted); }
+    dd { margin: 0; }
+    .check { display: flex; gap: 8px; align-items: center; font-weight: 600; }
+    .check input { width: auto; }
+    .stats { display: flex; gap: 28px; margin-bottom: 18px; flex-wrap: wrap; }
+    .stat b { display: block; font-size: 22px; }
+    footer { color: var(--muted); font-size: 13px; padding: 20px 0; border-top: 1px solid var(--line); }
+    .up { color: #137a3a; } .down { color: var(--danger); }
+    .stat small { display: block; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="wrap">
+      <a class="brand" href="/">{{ app_name.split(' ')[0] }} <span>{{ app_name.split(' ')[1] }}</span></a>
+      <a href="/">Portfolio</a>
+      <a href="/holdings/new">+ Add</a>
+      <a href="/market">Market</a>
+      <a href="/reports">Reports</a>
+      <a href="/docs">API docs</a>
+      <a href="/about">About</a>
+    </div>
+  </header>
+  <main class="wrap">
+    {% block content %}{% endblock %}
+  </main>
+  <footer class="wrap">{{ app_name }} · FastAPI on Vercel · Neon Postgres · Vercel Blob · Vercel Cron · prices by Finnhub</footer>
+</body>
+</html>

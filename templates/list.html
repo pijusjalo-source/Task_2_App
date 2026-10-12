@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
+{% block content %}
+{% if msg == "deleted" %}<div class="flash">Holding deleted.</div>{% endif %}
+
+<div class="row spread" style="margin-bottom:16px">
+  <h1 style="margin:0">My portfolio</h1>
+  <a class="btn" href="/holdings/new">+ Add holding</a>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="muted">Invested (active)</span><b>{{ s.total_cost|money }}</b></div>
+  <div class="stat"><span class="muted">Market value</span><b>{{ s.market_value|money }}</b></div>
+  <div class="stat"><span class="muted">P&amp;L</span><b>{{ pl(s.pnl) }}</b><small>{{ pl(s.pnl_pct, "%") }}</small></div>
+  <div class="stat"><span class="muted">S&amp;P 500 (SPY) today</span><b>{{ pl(s.spy_change_pct, "%") }}</b></div>
+</div>
+<p class="muted" style="margin-top:-6px">Prices in USD, last updated {{ s.prices_at|local }} (Vilnius time). <a href="/market">Market prices →</a></p>
+
+<form class="row" method="get" action="/" style="margin-bottom:16px">
+  <input name="q" value="{{ q }}" placeholder="Search ticker or company" style="max-width:240px">
+  <select name="status" style="max-width:150px">
+    <option value="all" {% if status=='all' %}selected{% endif %}>All</option>
+    <option value="active" {% if status=='active' %}selected{% endif %}>Active only</option>
+    <option value="closed" {% if status=='closed' %}selected{% endif %}>Closed only</option>
+  </select>
+  <select name="sort" style="max-width:190px">
+    <option value="newest" {% if sort=='newest' %}selected{% endif %}>Newest first</option>
+    <option value="pnl" {% if sort=='pnl' %}selected{% endif %}>Best P&amp;L %</option>
+    <option value="value" {% if sort=='value' %}selected{% endif %}>Largest position</option>
+    <option value="ticker" {% if sort=='ticker' %}selected{% endif %}>Ticker A–Z</option>
+    <option value="buy_date" {% if sort=='buy_date' %}selected{% endif %}>Latest buy date</option>
+  </select>
+  <button class="btn secondary" type="submit">Apply</button>
+</form>
+
+<div class="card" style="padding:4px 12px; overflow-x:auto">
+  {% if items %}
+  <table>
+    <thead><tr>
+      <th>Ticker</th><th class="num">Shares</th><th class="num">Buy price</th><th class="num">Current</th>
+      <th class="num hide-sm">Cost</th><th class="num hide-sm">Value</th><th class="num">P&amp;L</th><th class="num">P&amp;L %</th>
+      <th>Status</th><th></th>
+    </tr></thead>
+    <tbody>
+    {% for h in items %}
+      <tr>
+        <td><a class="ticker" href="/holdings/{{ h.id }}">{{ h.ticker }}</a><div class="muted hide-sm" style="font-size:13px">{{ h.company_name }}</div></td>
+        <td class="num">{{ h.shares }}</td>
+        <td class="num">{{ h.buy_price|money }}</td>
+        <td class="num">{{ h.current_price|money }}</td>
+        <td class="num hide-sm">{{ h.cost|money }}</td>
+        <td class="num hide-sm">{{ h.market_value|money }}</td>
+        <td class="num">{{ pl(h.pnl) }}</td>
+        <td class="num">{{ pl(h.pnl_pct, "%") }}</td>
+        <td>{% if h.is_active %}<span class="badge">Active</span>{% else %}<span class="badge closed">Closed</span>{% endif %}</td>
+        <td><a href="/holdings/{{ h.id }}/edit">Edit</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="padding:16px 4px">No holdings yet. <a href="/holdings/new">Add your first Mag 7 position.</a></p>
+  {% endif %}
+</div>
+<p class="muted" style="font-size:13px">Totals count active positions only. P&amp;L = (current price − buy price) × shares.</p>
+{% endblock %}

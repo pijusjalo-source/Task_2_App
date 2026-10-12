@@ -218,3 +218,9 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Mag7 Portfolio app
+local.db
+local_uploads/
+.vercel
+.DS_Store

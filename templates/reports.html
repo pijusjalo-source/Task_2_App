@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
+{% block content %}
+{% if msg == "ran" %}<div class="flash">Daily job finished.</div>{% endif %}
+
+<div class="row spread" style="margin-bottom:16px">
+  <h1 style="margin:0">Daily reports</h1>
+  <form method="post" action="/reports/run" style="margin:0">
+    <button class="btn" type="submit">Run daily job now</button>
+  </form>
+</div>
+
+<p class="muted">Background job: every weekday at 21:00 UTC (after the US market closes) Vercel Cron calls
+<code>/api/cron/daily</code>. It fetches the latest prices from Finnhub, calculates your portfolio P&amp;L,
+saves a CSV report (positions ranked by P&amp;L %) to Vercel Blob storage and records a summary here.
+The button runs the same job on demand.</p>
+
+<div class="card" style="padding:4px 12px; overflow-x:auto">
+  {% if reports %}
+  <table>
+    <thead><tr><th>When (Vilnius)</th><th>Trigger</th><th class="num">Positions</th><th class="num">Invested</th>
+      <th class="num">Value</th><th class="num">P&amp;L %</th><th class="num">SPY day %</th><th class="hide-sm">Prices</th><th>File</th></tr></thead>
+    <tbody>
+    {% for r in reports %}
+      <tr>
+        <td>{{ r.created_at|local }}</td>
+        <td>{{ r.trigger }}</td>
+        <td class="num">{{ r.holdings_count }}</td>
+        <td class="num">{{ r.total_cost|money }}</td>
+        <td class="num">{{ r.market_value|money }}</td>
+        <td class="num">{{ pl(r.pnl_pct, '%') }}</td>
+        <td class="num">{{ pl(r.spy_change_pct, '%') }}</td>
+        <td class="hide-sm muted" style="font-size:13px">{{ r.prices_status }}</td>
+        <td>{% if r.report_url %}<a href="{{ r.report_url }}">CSV</a>{% endif %}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <p class="muted" style="padding:16px 4px">No reports yet. Click “Run daily job now”.</p>
+  {% endif %}
+</div>
+{% endblock %}

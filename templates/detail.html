@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+{% macro pl(v, suffix="") %}<span class="{% if v is not none and v > 0 %}up{% elif v is not none and v < 0 %}down{% endif %}">{{ v|signed(suffix) }}</span>{% endmacro %}
+{% block content %}
+{% if msg == "created" %}<div class="flash">Holding added to your portfolio.</div>{% endif %}
+{% if msg == "updated" %}<div class="flash">Changes saved.</div>{% endif %}
+
+<div class="row spread" style="margin-bottom:16px">
+  <h1 style="margin:0"><span class="ticker">{{ h.ticker }}</span> · {{ h.company_name }}</h1>
+  <div class="row">
+    <a class="btn secondary" href="/holdings/{{ h.id }}/edit">Edit</a>
+    <form method="post" action="/holdings/{{ h.id }}/delete" style="margin:0"
+          onsubmit="return confirm('Delete {{ h.ticker }}? This also deletes its file.');">
+      <button class="btn danger" type="submit">Delete</button>
+    </form>
+  </div>
+</div>
+
+<div class="stats">
+  <div class="stat"><span class="muted">Cost</span><b>{{ h.cost|money }}</b></div>
+  <div class="stat"><span class="muted">Market value</span><b>{{ h.market_value|money }}</b></div>
+  <div class="stat"><span class="muted">P&amp;L</span><b>{{ pl(h.pnl) }}</b><small>{{ pl(h.pnl_pct, "%") }}</small></div>
+</div>
+
+<div class="card">
+  <dl>
+    <dt>Shares</dt><dd>{{ h.shares }}</dd>
+    <dt>Buy price</dt><dd>{{ h.buy_price|money }} USD</dd>
+    <dt>Current price</dt><dd>{{ h.current_price|money }} USD <span class="muted">(updated {{ h.price_updated_at|local }})</span></dd>
+    <dt>Buy date</dt><dd>{{ h.buy_date }}</dd>
+    <dt>Status</dt><dd>{% if h.is_active %}<span class="badge">Active</span>{% else %}<span class="badge closed">Closed</span>{% endif %}</dd>
+    <dt>Notes</dt><dd>{{ h.notes or '—' }}</dd>
+    <dt>Attachment</dt>
+    <dd>
+      {% if h.attachment_url %}
+        <a href="{{ h.attachment_url }}" target="_blank">{{ h.attachment_name }}</a>
+        {% if h.attachment_name and h.attachment_name.lower().endswith(('.png', '.jpg', '.jpeg', '.webp')) %}
+          <div style="margin-top:10px"><img src="{{ h.attachment_url }}" alt="" style="max-width:240px; max-height:160px; border-radius:6px; border:1px solid var(--line)"></div>
+        {% endif %}
+      {% else %}—{% endif %}
+    </dd>
+    <dt>Created / updated</dt><dd class="muted">{{ h.created_at|local }} / {{ h.updated_at|local }}</dd>
+    <dt>API</dt><dd><a href="/api/holdings/{{ h.id }}">/api/holdings/{{ h.id }}</a></dd>
+  </dl>
+</div>
+<p><a href="/">← Back to portfolio</a></p>
+{% endblock %}
