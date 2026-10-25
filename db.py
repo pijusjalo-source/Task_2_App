@@ -1,8 +1,8 @@
 """Database layer (requirement: database for persistence).
 
 The connection string comes from an environment variable (12-Factor rule III:
-config lives in the environment, not in the code). On Vercel, the Neon Postgres
-integration sets DATABASE_URL automatically. Locally, if no URL is set, we fall
+config lives in the environment, not in the code). On Render, DATABASE_URL is set
+in the web service's environment. Locally, if no URL is set, we fall
 back to a SQLite file so the app can run without any cloud account.
 
 Three tables:
@@ -42,7 +42,7 @@ holdings = Table(
     Column("buy_date", Date, nullable=False),              # date
     Column("is_active", Boolean, nullable=False, default=True),  # boolean
     Column("notes", Text, nullable=True),
-    Column("attachment_url", Text, nullable=True),         # link to the file in Blob storage
+    Column("attachment_url", Text, nullable=True),         # path of the file in storage (/files/...)
     Column("attachment_name", String(255), nullable=True),
     Column("created_at", DateTime(timezone=True), server_default=func.now()),
     Column("updated_at", DateTime(timezone=True), server_default=func.now()),
@@ -72,7 +72,7 @@ reports = Table(
     Column("pnl", Numeric(16, 2), nullable=True),
     Column("pnl_pct", Numeric(8, 2), nullable=True),
     Column("spy_change_pct", Numeric(8, 2), nullable=True),
-    Column("report_url", Text, nullable=True),              # CSV file in Blob storage
+    Column("report_url", Text, nullable=True),              # path of the CSV file in storage (/files/...)
 )
 
 

@@ -2,10 +2,10 @@
 
   1. Market data  -> fetch prices from Finnhub (an external API) into the `prices` table
   2. P&L maths    -> combine the holdings with the latest saved prices
-  3. File storage -> upload and delete files in Vercel Blob   (requirement: file storage)
+  3. File storage -> upload and delete files in S3-compatible storage   (requirement: file storage)
   4. Daily job    -> prices + P&L + CSV report                (requirement: background operation)
 
-The secrets (FINNHUB_API_KEY, BLOB_READ_WRITE_TOKEN) are read from environment
+The secrets (FINNHUB_API_KEY, S3_ACCESS_KEY_ID, S3_SECRET_ACCESS_KEY) are read from environment
 variables and never written in the code (12-Factor rule III: config in the environment).
 """
 
@@ -21,7 +21,8 @@ from datetime import datetime, timezone
 from decimal import Decimal
 
 from sqlalchemy import insert, select, update
-from vercel import blob  # official Vercel SDK; it reads BLOB_READ_WRITE_TOKEN by itself
+import boto3
+from botocore.config import Config
 
 from db import get_engine, holdings, prices, reports
 
@@ -124,23 +125,26 @@ def portfolio_totals(items: list, price_map: dict) -> dict:
     }
 
 
-# ---------------------------------------------------------------- 3. file storage (Vercel Blob)
-# On Vercel the app's own disk is read-only and temporary (ephemeral filesystem),
-# so files must live in a separate storage service. Connecting a Blob store to the
-# project makes Vercel set BLOB_READ_WRITE_TOKEN for us.
+# ---------------------------------------------------------------- 3. file storage (S3: Supabase Storage)
+# The app's own disk on a PaaS is temporary, so files go to S3-compatible storage.
+# Its address, login and bucket name come from the S3_* environment variables.
 
 ALLOWED_TYPES = {"image/png", "image/jpeg", "image/webp", "application/pdf", "text/csv"}
-MAX_BYTES = 4 * 1024 * 1024  # Vercel accepts request bodies up to about 4.5 MB
+MAX_BYTES = 4 * 1024 * 1024  # max 4 MB per file
+BUCKET = os.getenv("S3_BUCKET")
 
+def s3():
+    return boto3.client("s3", endpoint_url=os.getenv("S3_ENDPOINT"), region_name=os.getenv("S3_REGION"),
+                        aws_access_key_id=os.getenv("S3_ACCESS_KEY_ID"),
+                        aws_secret_access_key=os.getenv("S3_SECRET_ACCESS_KEY"),
+                        config=Config(signature_version="s3v4", s3={"addressing_style": "path"}))
 
-def blob_connected() -> bool:
-    return bool(os.getenv("BLOB_READ_WRITE_TOKEN"))
-
+def storage_connected() -> bool:
+    return bool(BUCKET)
 
 def check_upload(content_type: str, data: bytes) -> str | None:
-    """Return a message if the file is not allowed, or None if it is fine."""
-    if not blob_connected():
-        return "File storage is not connected (BLOB_READ_WRITE_TOKEN is not set)"
+    if not storage_connected():
+        return "File storage is not connected (S3_BUCKET is not set)"
     if not data:
         return "The file is empty"
     if len(data) > MAX_BYTES:
@@ -149,33 +153,28 @@ def check_upload(content_type: str, data: bytes) -> str | None:
         return "Only PNG, JPG, WEBP, PDF or CSV files are allowed"
     return None
 
-
 def attachment_path(holding_id: int, filename: str) -> str:
-    """holdings/{id}/{random8}-{safe-filename}; the random part keeps names unique."""
     safe = re.sub(r"[^A-Za-z0-9._-]+", "-", filename)[:80]
     return f"holdings/{holding_id}/{uuid.uuid4().hex[:8]}-{safe}"
 
-
-def upload_file(path: str, data: bytes, content_type: str) -> str:
-    """Save the bytes in Vercel Blob and return the file's public URL."""
-    return blob.put(path, data, access="public", content_type=content_type).url
-
+def upload_file(key: str, data: bytes, content_type: str) -> str:
+    """Save the file in the bucket and return the path we store in the database."""
+    s3().put_object(Bucket=BUCKET, Key=key, Body=data, ContentType=content_type)
+    return "/files/" + key
 
 def delete_file(url: str | None) -> None:
-    """Delete a file from Vercel Blob. A failure is only logged, so that a
-    holding can still be deleted when its file is already gone."""
+    """Delete a file from the bucket; a failure is only logged."""
     if url:
         try:
-            blob.delete(url)
+            s3().delete_object(Bucket=BUCKET, Key=url.removeprefix("/files/"))
         except Exception as exc:
             print(f"[storage] could not delete {url}: {exc}")
-
 
 # ---------------------------------------------------------------- 4. daily job (background operation)
 
 def run_daily_job(trigger: str) -> dict:
-    """Vercel Cron calls this (through GET /api/cron/daily) every weekday after the
-    US market closes. The "Run daily job now" button calls the same function."""
+    """The scheduler (GitHub Actions) calls this through GET /api/cron/daily every weekday after
+    the US market closes. The "Run daily job now" button calls the same function."""
     # 1. Fetch the prices. If Finnhub fails, the old saved prices are used below.
     result = refresh_prices()
     status = f"{result['updated']}/{len(SYMBOLS)} updated"
@@ -190,7 +189,7 @@ def run_daily_job(trigger: str) -> dict:
     items.sort(key=lambda i: i["pnl_pct"] if i["pnl_pct"] is not None else 0, reverse=True)
     totals = portfolio_totals(items, price_map)
 
-    # 3. Build the CSV report in memory (no local disk on Vercel) and upload it to Blob.
+    # 3. Build the CSV report in memory and upload it to storage.
     buffer = io.StringIO()
     writer = csv.writer(buffer)
     writer.writerow(["rank", "ticker", "company", "shares", "buy_price", "buy_date",
@@ -202,7 +201,7 @@ def run_daily_job(trigger: str) -> dict:
                      totals["pnl"], totals["pnl_pct"]])
     writer.writerow(["SPY change %", totals["spy_change_pct"]])
     report_url = None
-    if blob_connected():
+    if storage_connected():
         stamp = datetime.now(timezone.utc).strftime("%Y-%m-%d_%H%M%S")
         report_url = upload_file(f"reports/portfolio-report-{stamp}.csv", buffer.getvalue().encode(), "text/csv")
 
@@ -221,6 +220,6 @@ def run_daily_job(trigger: str) -> dict:
     with get_engine().begin() as conn:
         conn.execute(insert(reports).values(**row))
 
-    # 5. print() output shows up in Vercel's logs.
+    # 5. print() output shows up in Render's logs.
     print(f"[job] {trigger}: {status}, {totals['count']} holdings, P&L {totals['pnl']}, report {report_url}")
     return row

@@ -1,0 +1,16 @@
+name: Daily portfolio job
+
+on:
+  schedule:
+    - cron: "0 21 * * 1-5"   # weekdays 21:00 UTC, after the US market closes
+  workflow_dispatch:          # adds a "Run workflow" button for manual tests
+
+jobs:
+  run-daily-job:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call the app's cron endpoint
+        run: |
+          curl --fail --max-time 120 \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            "${{ secrets.APP_URL }}/api/cron/daily"

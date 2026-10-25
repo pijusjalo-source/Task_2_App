@@ -9,9 +9,9 @@
   </form>
 </div>
 
-<p class="muted">Background job: every weekday at 21:00 UTC (after the US market closes) Vercel Cron calls
+<p class="muted">Background job: every weekday at 21:00 UTC (after the US market closes) a GitHub Actions schedule calls
 <code>/api/cron/daily</code>. It fetches the latest prices from Finnhub, calculates your portfolio P&amp;L,
-saves a CSV report (positions ranked by P&amp;L %) to Vercel Blob storage and records a summary here.
+saves a CSV report (positions ranked by P&amp;L %) to S3 file storage and records a summary here.
 The button runs the same job on demand.</p>
 
 <div class="card" style="padding:4px 12px; overflow-x:auto">

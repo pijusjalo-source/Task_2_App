@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 {% block content %}
-{% if not has_key %}<div class="flash err">API key not set: add FINNHUB_API_KEY in Vercel → Settings → Environment Variables to fetch prices.</div>
+{% if not has_key %}<div class="flash err">API key not set: add FINNHUB_API_KEY in Render → Environment to fetch prices.</div>
 {% elif msg == "failed" %}<div class="flash err">Some prices could not be fetched. The last saved prices are shown.</div>
 {% elif msg == "ok" %}<div class="flash">Prices updated from Finnhub.</div>{% endif %}
 
@@ -12,7 +12,7 @@
 </div>
 
 <p class="muted">Prices come from the Finnhub API. A background job saves them every weekday after the US market
-closes (Vercel Cron, 21:00 UTC). This button fetches them on demand.</p>
+closes (GitHub Actions schedule, 21:00 UTC). This button fetches them on demand.</p>
 
 <div class="card" style="padding:4px 12px; overflow-x:auto">
   <table>

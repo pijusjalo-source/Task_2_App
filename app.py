@@ -1,12 +1,12 @@
 """Mag7 Portfolio: a CRUD app for a portfolio of Magnificent 7 stocks.
 
-Runs on Vercel (PaaS) as one Python function. This one FastAPI app serves:
+Runs on Render (PaaS) as a web service started by uvicorn. This one FastAPI app serves:
   * the web application -> HTML pages                      (requirement: web application)
   * the public API      -> JSON under /api/..., docs at /docs  (requirement: public API)
-  * the background job  -> GET /api/cron/daily, called by Vercel Cron
+  * the background job  -> GET /api/cron/daily, called by a GitHub Actions schedule
 
-Vercel finds the app because this file is app.py in the repo root and the
-FastAPI object is named `app`.
+Render starts it with `uvicorn app:app --host 0.0.0.0 --port $PORT`:
+file app.py, FastAPI object `app`, on the port Render provides.
 """
 
 import os
@@ -91,7 +91,7 @@ def update_holding(holding_id: int, values: dict) -> None:
 
 def delete_holding(holding_id: int) -> None:
     h = get_holding(holding_id)
-    services.delete_file(h["attachment_url"])  # also remove its file from Blob
+    services.delete_file(h["attachment_url"])  # also remove its file from storage
     with get_engine().begin() as conn:
         conn.execute(delete(holdings).where(holdings.c.id == holding_id))
 
@@ -108,7 +108,7 @@ async def read_upload(upload):
 
 
 def save_attachment(h: dict, file: tuple) -> None:
-    """Upload the file to Blob, remember its URL on the holding and delete the file it replaces."""
+    """Upload the file to storage, remember its path on the holding and delete the file it replaces."""
     name, content_type, data = file
     url = services.upload_file(services.attachment_path(h["id"], name), data, content_type)
     update_holding(h["id"], {"attachment_url": url, "attachment_name": name})
@@ -223,6 +223,12 @@ def page_run_report():
     services.run_daily_job(trigger="manual")
     return RedirectResponse("/reports?msg=ran", status_code=303)
 
+@app.get("/files/{key:path}", include_in_schema=False)
+def get_file(key: str):
+    """Files are private: send the browser to a temporary signed link (valid 1 hour)."""
+    link = services.s3().generate_presigned_url(
+        "get_object", Params={"Bucket": services.BUCKET, "Key": key}, ExpiresIn=3600)
+    return RedirectResponse(link)
 
 # ---------------------------------------------------------------- public API (JSON)
 # FastAPI validates the JSON body against HoldingIn by itself and answers
@@ -263,7 +269,7 @@ def api_delete(holding_id: int):
 
 @app.post("/api/holdings/{holding_id}/attachment", tags=["holdings"])
 async def api_upload(holding_id: int, file: UploadFile = File(...)):
-    """Upload a file (PNG, JPG, WEBP, PDF or CSV, max 4 MB) for a holding. It is stored in Vercel Blob."""
+    """Upload a file (PNG, JPG, WEBP, PDF or CSV, max 4 MB) for a holding. It is stored in S3 file storage."""
     h = get_holding(holding_id)
     upload, error = await read_upload(file)
     if upload is None:
@@ -286,9 +292,9 @@ def api_prices():
 
 @app.get("/api/cron/daily", tags=["background job"])
 def api_cron(authorization: Optional[str] = Header(None)):
-    """The background job. Vercel Cron calls this URL every weekday at 21:00 UTC
-    (see vercel.json). If the CRON_SECRET environment variable is set, Vercel
-    sends it as a Bearer token and every other caller is refused."""
+    """The background job. A GitHub Actions schedule calls this URL every weekday at 21:00 UTC
+    (see .github/workflows). If the CRON_SECRET environment variable is set, the
+    scheduler must send it as a Bearer token and every other caller is refused."""
     secret = os.getenv("CRON_SECRET")
     if secret and authorization != f"Bearer {secret}":
         raise HTTPException(status_code=401, detail="Unauthorized")

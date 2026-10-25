@@ -49,7 +49,7 @@
   </div>
 
   <div class="field {% if errors.get('attachment') %}has-error{% endif %}">
-    <label for="attachment">Attachment <span class="hint">optional · e.g. trade confirmation · PNG, JPG, WEBP, PDF or CSV, max 4 MB · stored in Vercel Blob</span></label>
+    <label for="attachment">Attachment <span class="hint">optional · e.g. trade confirmation · PNG, JPG, WEBP, PDF or CSV, max 4 MB · stored in S3 file storage</span></label>
     {% if holding and holding.attachment_url %}
       <p class="muted" style="margin:4px 0 8px">Current: <a href="{{ holding.attachment_url }}" target="_blank">{{ holding.attachment_name }}</a>
         &nbsp;<label class="check" style="display:inline-flex; font-weight:400"><input type="checkbox" name="remove_attachment"> remove</label></p>
